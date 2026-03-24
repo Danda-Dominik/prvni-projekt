@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Světový čas</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #0f0f1a;
+      color: #fff;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    h1 {
+      font-size: 1.2rem;
+      font-weight: 400;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: #888;
+      margin-bottom: 3rem;
+    }
+
+    .clocks {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 2rem;
+      width: 100%;
+      max-width: 1000px;
+    }
+
+    .clock-card {
+      background: #1a1a2e;
+      border: 1px solid #2a2a4a;
+      border-radius: 16px;
+      padding: 2rem 1.5rem;
+      text-align: center;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .clock-card:hover {
+      transform: translateY(-4px);
+      border-color: #4a4a8a;
+    }
+
+    .city {
+      font-size: 1rem;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #aaa;
+      margin-bottom: 0.4rem;
+    }
+
+    .timezone-label {
+      font-size: 0.75rem;
+      color: #555;
+      margin-bottom: 1.5rem;
+      letter-spacing: 0.05em;
+    }
+
+    .time {
+      font-size: 2.8rem;
+      font-weight: 300;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.05em;
+      color: #fff;
+      line-height: 1;
+    }
+
+    .seconds {
+      font-size: 1.8rem;
+      color: #555;
+    }
+
+    .date {
+      font-size: 0.85rem;
+      color: #666;
+      margin-top: 0.8rem;
+      letter-spacing: 0.05em;
+    }
+
+    .offset {
+      font-size: 0.75rem;
+      color: #444;
+      margin-top: 0.4rem;
+    }
+
+    /* barevné akcenty pro každé město */
+    .clock-card:nth-child(1) { border-top: 3px solid #e04040; }
+    .clock-card:nth-child(2) { border-top: 3px solid #4080e0; }
+    .clock-card:nth-child(3) { border-top: 3px solid #40c080; }
+    .clock-card:nth-child(4) { border-top: 3px solid #e0a040; }
+
+    .clock-card:nth-child(1) .time { color: #ff8080; }
+    .clock-card:nth-child(2) .time { color: #80b0ff; }
+    .clock-card:nth-child(3) .time { color: #80ffbb; }
+    .clock-card:nth-child(4) .time { color: #ffd080; }
+  </style>
+</head>
+<body>
+  <h1>Světový čas</h1>
+  <div class="clocks" id="clocks"></div>
+
+  <script>
+    const cities = [
+      { name: 'Toronto',  timezone: 'America/Toronto',  label: 'EST / EDT' },
+      { name: 'Prague',   timezone: 'Europe/Prague',    label: 'CET / CEST' },
+      { name: 'Athens',   timezone: 'Europe/Athens',    label: 'EET / EEST' },
+      { name: 'Baku',     timezone: 'Asia/Baku',        label: 'AZT' },
+    ];
+
+    const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+    function getOffset(timezone) {
+      const now = new Date();
+      const parts = new Intl.DateTimeFormat('en', {
+        timeZone: timezone,
+        timeZoneName: 'shortOffset'
+      }).formatToParts(now);
+      const tz = parts.find(p => p.type === 'timeZoneName');
+      return tz ? tz.value : '';
+    }
+
+    function buildCards() {
+      const container = document.getElementById('clocks');
+      cities.forEach(city => {
+        const card = document.createElement('div');
+        card.className = 'clock-card';
+        card.innerHTML = `
+          <div class="city">${city.name}</div>
+          <div class="timezone-label">${city.label}</div>
+          <div class="time">
+            <span class="hm" id="hm-${city.timezone}">--:--</span><span class="seconds" id="sec-${city.timezone}">:--</span>
+          </div>
+          <div class="date" id="date-${city.timezone}">---</div>
+          <div class="offset" id="offset-${city.timezone}"></div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function pad(n) { return String(n).padStart(2, '0'); }
+
+    function tick() {
+      const now = new Date();
+      cities.forEach(city => {
+        const parts = new Intl.DateTimeFormat('en', {
+          timeZone: city.timezone,
+          hour: '2-digit', minute: '2-digit', second: '2-digit',
+          hour12: false,
+          weekday: 'long', day: 'numeric', month: 'short', year: 'numeric'
+        }).formatToParts(now);
+
+        const get = type => parts.find(p => p.type === type)?.value ?? '';
+
+        const h = get('hour');
+        const m = get('minute');
+        const s = get('second');
+        const weekday = get('weekday');
+        const day = get('day');
+        const month = get('month');
+        const year = get('year');
+
+        document.getElementById(`hm-${city.timezone}`).textContent = `${h}:${m}`;
+        document.getElementById(`sec-${city.timezone}`).textContent = `:${s}`;
+        document.getElementById(`date-${city.timezone}`).textContent = `${weekday}, ${day} ${month} ${year}`;
+        document.getElementById(`offset-${city.timezone}`).textContent = getOffset(city.timezone);
+      });
+    }
+
+    buildCards();
+    tick();
+    setInterval(tick, 1000);
+  </script>
+</body>
+</html>
